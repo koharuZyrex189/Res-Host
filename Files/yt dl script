@@ -1,132 +1,58 @@
-(function() {
-    'use strict';
+// ==UserScript==
+// @name           YouTube Link Cleaner
+// @name:de        YouTube Link Cleaner
+// @namespace      tfr
+// @description    Removes unneeded parameters and redirection pages from YouTube links.
+// @description:de Entfernt unnötige Parameter und Weiterleitungsseiten aus YouTube-Links.
+// @author         tfr (https://github.com/t-fr/)
+// @license        CC0; https://creativecommons.org/publicdomain/zero/1.0/
+// @license        MIT license; https://pastebin.com/raw.php?i=4TMeeUXC
+// @compatible     firefox Works with Firefox and Greasemonkey
+// @compatible     chrome Works with Chrome and Tampermonkey
+// @compatible     opera Works with Opera and Tampermonkey Beta or Violent monkey
+// @oujs:author    tfr
+// @include        http://youtube.com/*
+// @include        http://www.youtube.com/*
+// @include        https://youtube.com/*
+// @include        https://www.youtube.com/*
+// @version        8
+// @grant          none
+// ==/UserScript==
  
-    const i18n = {
-        'zh': {
-            downloadText: 'Free Download',
-            error: {
-                addNormalButton: '添加普通下载按钮时出错:',
-                addShortsButton: '添加Shorts下载按钮时出错:'
-            }
-        },
-        'en': {
-            downloadText: 'Free Download',
-            error: {
-                addNormalButton: 'Error adding normal download button:',
-                addShortsButton: 'Error adding Shorts download button:'
-            }
-        },
-        'ja': {
-            downloadText: '無料ダウンロード',
-            error: {
-                addNormalButton: '通常ダウンロードボタンの追加エラー:',
-                addShortsButton: 'Shortsダウンロードボタンの追加エラー:'
-            }
-        },
-        'es': {
-            downloadText: 'Descarga Gratis',
-            error: {
-                addNormalButton: 'Error al agregar botón de descarga normal:',
-                addShortsButton: 'Error al agregar botón de descarga Shorts:'
-            }
-        },
-        'pt': {
-            downloadText: 'Download Grátis',
-            error: {
-                addNormalButton: 'Erro ao adicionar botão de download normal:',
-                addShortsButton: 'Erro ao adicionar botão de download Shorts:'
-            }
-        }
-    };
+/* This script is dual-licensed under CC0 and the MIT license.
+ * You can choose which one you want to use.
+ * CC0 license: http://creativecommons.org/publicdomain/zero/1.0/deed.en
+ * MIT license: https://pastebin.com/raw.php?i=4TMeeUXC
+ *
+ * Dieses Skript steht sowohl unter CC0 als auch unter der MIT-Lizenz.
+ * Sie können sich aussuchen, welche Lizenz Sie nutzen.
+ * CC0-Lizenz: http://creativecommons.org/publicdomain/zero/1.0/deed.de
+ * MIT-Lizenz: https://pastebin.com/raw.php?i=4TMeeUXC
+ */
  
-    GM_addStyle(`
-        .youhou-download-btn {
-            background: rgb(242, 242, 242);
-            border: none;
-            border-radius: 18px;
-            color: #0f0f0f;
-            padding: 0 16px;
-            height: 36px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            white-space: nowrap;
-        }
-        .youhou-download-btn:hover {
-            background: rgb(230, 230, 230);
-        }
-        .youhou-buttons-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-    `);
+/* Version 8: Accidentally removed the disabling of redirect pages, restore it
+ * Version 7: Found another way to disable SPF
+ * Version 6: Update license data
+ * Version 5: update metadata, German description
+ * Version 4: change URL parameters without reloading
+ */
  
-    function waitForElement(selector, callback, maxTries = 10) {
-        let tries = 0;
-        
-        function check() {
-            const element = document.querySelector(selector);
-            if (element) {
-                callback(element);
-                return;
-            }
-            
-            tries++;
-            if (tries < maxTries) {
-                setTimeout(check, 1000);
-            }
-        }
-        
-        check();
-    }
- 
-    function createDownloadButton() {
-        if (document.querySelector('.youhou-download-btn')) {
-            return;
-        }
-        
-        const downloadButton = document.createElement('button');
-        downloadButton.className = 'youhou-download-btn';
-        downloadButton.textContent = i18n['zh'].downloadText;
-        
-        downloadButton.addEventListener('click', function() {
-            const videoUrl = window.location.href;
-            const downloadDomains = ['addyoutube.com'];
-            const randomDomain = downloadDomains[Math.floor(Math.random() * downloadDomains.length)];
-            const newUrl = videoUrl.replace('youtube.com', randomDomain);
-            window.open(newUrl, '_blank');
-        });
-        
-        return downloadButton;
-    }
- 
-    function tryAddButton() {
-        waitForElement('#subscribe-button button', (subscribeButton) => {
-            if (!document.querySelector('.youhou-download-btn')) {
-                const downloadButton = createDownloadButton();
-                const container = subscribeButton.closest('#subscribe-button');
-                if (container) {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'youhou-buttons-wrapper';
-                    
-                    container.parentNode.insertBefore(wrapper, container);
-                    wrapper.appendChild(container);
-                    
-                    wrapper.appendChild(downloadButton);
-                }
-            }
-        });
-    }
- 
-    document.addEventListener('yt-navigate-finish', function() {
-        if (window.location.pathname.includes('/watch')) {
-            setTimeout(tryAddButton, 1000);
-        }
-    });
- 
-    if (window.location.pathname.includes('/watch')) {
-        setTimeout(tryAddButton, 1000);
-    }
- 
-})();
+/* If on a redirect page, redirect */
+if(window.location.pathname == "/redirect") {
+  window.location.href.match(/(&|\?)q=(.*?)(&|$)/);
+  window.location.replace(window.decodeURIComponent(RegExp.$2));
+}
+/* If a unneeded parameter exists, remove it */
+if(window.location.href.match(/(&(feature|src_vid|annotation_id|gl|hl)=[a-zA-Z0-9_\-\.]*|\?(feature|src_vid|annotation_id|gl|hl)=[a-zA-Z0-9_\-\.]*$)/)) {
+  window.history.replaceState({}, window.document.title, window.location.href.replace(/(&(feature|src_vid|annotation_id|gl|hl)=[a-zA-Z0-9_\-\.]*|\?(feature|src_vid|annotation_id|gl|hl)=[a-zA-Z0-9_\-\.]*$)/g, ''));
+}
+for (var i = 0; i < window.document.links.length; i++) {
+  /* Remove unneeded parameters */
+  window.document.links[i].href = window.document.links[i].href.replace(/(&(feature|src_vid|annotation_id|gl|hl)=[a-zA-Z0-9_\-\.]*|\?(feature|src_vid|annotation_id|gl|hl)=[a-zA-Z0-9_\-\.]*$)/g, '');
+  /* Do not use redirect pages */
+  window.document.links[i].className = window.document.links[i].className.replace(/(yt-uix-redirect-link)/g, "");
+}
+// Disable SPF, inspired by https://openuserjs.org/scripts/JoeSimmons/YouTube_-_Disable_Red_Bar_aka_SPF/source
+if(window && window._spf_state && window._spf_state.config) {
+  window._spf_state.config["navigate-limit"] = 0;
+}
